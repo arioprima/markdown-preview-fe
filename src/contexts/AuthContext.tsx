@@ -16,9 +16,9 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
-  loginWithToken: (token: string) => Promise<void>;
+  loginWithCookie: () => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -31,17 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
+      // Cookie automatically sent, just call profile
       const response = await authApi.getProfile();
       setUser(response.data);
     } catch {
-      localStorage.removeItem("token");
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -54,15 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: LoginCredentials) => {
     const response = await authApi.login(credentials);
-    localStorage.setItem("token", response.data.token);
+    // Cookie is set by backend, just update user state
     setUser(response.data.user);
     router.push("/dashboard");
   };
 
-  const loginWithToken = async (token: string) => {
-    // Save token first
-    localStorage.setItem("token", token);
-    // Fetch user profile to update state
+  const loginWithCookie = async () => {
+    // After OAuth callback, cookie is already set by backend
+    // Just fetch profile to get user data
     const response = await authApi.getProfile();
     setUser(response.data);
     router.push("/dashboard");
@@ -70,13 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (credentials: RegisterCredentials) => {
     const response = await authApi.register(credentials);
-    localStorage.setItem("token", response.data.token);
+    // Cookie is set by backend, just update user state
     setUser(response.data.user);
     router.push("/dashboard");
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
+  const logout = async () => {
+    try {
+      await authApi.logout(); // Clear cookie on backend
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
     setUser(null);
     router.push("/login");
   };
@@ -88,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
-        loginWithToken,
+        loginWithCookie,
         register,
         logout,
         refreshUser,

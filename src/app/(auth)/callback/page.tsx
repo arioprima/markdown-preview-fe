@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loginWithToken } = useAuth();
+  const { loginWithCookie } = useAuth();
   const hasRun = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +17,6 @@ function AuthCallbackContent() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    const token = searchParams.get("token");
     const errorParam = searchParams.get("error");
 
     // Handle error from OAuth provider
@@ -26,14 +25,8 @@ function AuthCallbackContent() {
       return;
     }
 
-    // Validate token
-    if (!token) {
-      router.replace("/login?error=No+token+received");
-      return;
-    }
-
-    // Use AuthContext to login with token
-    loginWithToken(token).catch((err) => {
+    // Cookie is already set by backend, just fetch profile
+    loginWithCookie().catch((err) => {
       console.error("OAuth callback error:", err);
       setError("Failed to complete login. Please try again.");
       // Redirect to login after a brief delay

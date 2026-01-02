@@ -15,8 +15,8 @@ export async function proxyRequest(
 ) {
   const url = `${API_URL}${path}`;
 
-  // Forward authorization header if present
-  const authHeader = request.headers.get("authorization");
+  // Forward cookie header for auth
+  const cookieHeader = request.headers.get("cookie");
   const contentType = request.headers.get("content-type") || "application/json";
 
   const headers: Record<string, string> = {
@@ -24,8 +24,8 @@ export async function proxyRequest(
     ...options.headers,
   };
 
-  if (authHeader) {
-    headers["Authorization"] = authHeader;
+  if (cookieHeader) {
+    headers["Cookie"] = cookieHeader;
   }
 
   try {
@@ -45,7 +45,17 @@ export async function proxyRequest(
       responseData = data;
     }
 
-    return NextResponse.json(responseData, { status: response.status });
+    const nextResponse = NextResponse.json(responseData, {
+      status: response.status,
+    });
+
+    // Forward Set-Cookie from backend to client
+    const setCookie = response.headers.get("set-cookie");
+    if (setCookie) {
+      nextResponse.headers.set("Set-Cookie", setCookie);
+    }
+
+    return nextResponse;
   } catch (error) {
     console.error("Proxy error:", error);
     return NextResponse.json(

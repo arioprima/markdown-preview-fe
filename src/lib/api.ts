@@ -15,37 +15,23 @@ import {
 // Create axios instance - uses Next.js API routes as proxy
 const api = axios.create({
   baseURL: "/api",
+  withCredentials: true, // Enable cookie sending
   headers: {
     "Content-Type": "application/json",
   },
 });
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Response interceptor to handle 401
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Jangan redirect jika sedang login/register
+      // Don't redirect if on auth endpoints
       const isAuthEndpoint =
         error.config?.url?.includes("/auth/login") ||
         error.config?.url?.includes("/auth/register");
 
       if (!isAuthEndpoint && typeof window !== "undefined") {
-        localStorage.removeItem("token");
         window.location.href = "/login";
       }
     }
@@ -91,6 +77,11 @@ export const authApi = {
 
   deleteAccount: async (): Promise<ApiResponse<null>> => {
     const response = await api.delete("/auth/account");
+    return response.data;
+  },
+
+  logout: async (): Promise<ApiResponse<null>> => {
+    const response = await api.post("/auth/logout");
     return response.data;
   },
 
