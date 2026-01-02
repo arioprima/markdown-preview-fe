@@ -16,6 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -58,6 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/dashboard");
   };
 
+  const loginWithToken = async (token: string) => {
+    // Save token first
+    localStorage.setItem("token", token);
+    // Fetch user profile to update state
+    const response = await authApi.getProfile();
+    setUser(response.data);
+    router.push("/dashboard");
+  };
+
   const register = async (credentials: RegisterCredentials) => {
     const response = await authApi.register(credentials);
     localStorage.setItem("token", response.data.token);
@@ -78,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginWithToken,
         register,
         logout,
         refreshUser,

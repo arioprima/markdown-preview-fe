@@ -93,6 +93,18 @@ export const authApi = {
     const response = await api.delete("/auth/account");
     return response.data;
   },
+
+  // Google OAuth
+  getGoogleAuthUrl: (): string => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+    return `${API_URL}/auth/google`;
+  },
+
+  // GitHub OAuth
+  getGitHubAuthUrl: (): string => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+    return `${API_URL}/auth/github`;
+  },
 };
 
 // ============ FILES API ============

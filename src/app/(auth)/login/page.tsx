@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,8 +72,11 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    // TODO: Implement social login when API is ready
-    console.log(`Login with ${provider}`);
+    if (provider === "google") {
+      window.location.href = authApi.getGoogleAuthUrl();
+    } else if (provider === "github") {
+      window.location.href = authApi.getGitHubAuthUrl();
+    }
   };
 
   return (
