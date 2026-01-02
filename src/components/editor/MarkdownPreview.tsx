@@ -6,6 +6,9 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils";
 
+// Import highlight.js theme only when this component is used
+import "highlight.js/styles/tokyo-night-dark.css";
+
 // --- KOMPONEN CAROUSEL ---
 const SimpleCarousel = ({ content }: { content: string }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
