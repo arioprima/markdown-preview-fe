@@ -26,12 +26,18 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Don't redirect if on auth endpoints
+      // Don't redirect if on auth endpoints or profile check
+      const url = error.config?.url || "";
       const isAuthEndpoint =
-        error.config?.url?.includes("/auth/login") ||
-        error.config?.url?.includes("/auth/register");
+        url.includes("/auth/login") ||
+        url.includes("/auth/register") ||
+        url.includes("/auth/profile"); // Don't redirect on profile check
 
-      if (!isAuthEndpoint && typeof window !== "undefined") {
+      // Also check if already on login page to prevent infinite loop
+      const isOnLoginPage =
+        typeof window !== "undefined" && window.location.pathname === "/login";
+
+      if (!isAuthEndpoint && !isOnLoginPage && typeof window !== "undefined") {
         window.location.href = "/login";
       }
     }
