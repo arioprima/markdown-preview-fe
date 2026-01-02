@@ -22,7 +22,7 @@ export function LayoutProviders({ children }: LayoutProvidersProps) {
       <AuthProvider>
         {children}
         <Suspense fallback={null}>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-right" duration={2000} />
         </Suspense>
       </AuthProvider>
     </ThemeProvider>

@@ -87,15 +87,15 @@ export default function EditorPage() {
     try {
       if (isNewFile) {
         const response = await filesApi.create(title, content);
-        toast.success("File created successfully");
+        toast.success("File created successfully", { duration: 1500 });
         router.push(`/editor/${response.data.id}`);
       } else {
         await filesApi.update(fileId, title, content);
-        toast.success("File saved successfully");
+        toast.success("File saved successfully", { duration: 1500 });
       }
     } catch (error) {
       console.error("Failed to save:", error);
-      toast.error("Failed to save file");
+      toast.error("Failed to save file", { duration: 1500 });
     } finally {
       setIsSaving(false);
     }
@@ -105,11 +105,11 @@ export default function EditorPage() {
     setIsDeleting(true);
     try {
       await filesApi.delete(fileId);
-      toast.success("File moved to trash");
+      toast.success("File moved to trash", { duration: 1500 });
       router.push("/dashboard");
     } catch (error) {
       console.error("Failed to delete:", error);
-      toast.error("Failed to delete file");
+      toast.error("Failed to delete file", { duration: 1500 });
     } finally {
       setIsDeleting(false);
     }
