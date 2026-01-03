@@ -136,9 +136,9 @@ export default function EditorPage() {
   }
 
   return (
-    <>
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Editor Header */}
-      <header className="h-14 md:h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-between px-2 md:px-4 lg:px-6 sticky top-0 z-10">
+      <header className="h-14 md:h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-between px-2 md:px-4 lg:px-6 z-10">
         <div className="flex items-center gap-1 md:gap-4 flex-1 min-w-0 overflow-hidden">
           <Button
             variant="ghost"
@@ -327,6 +327,6 @@ export default function EditorPage() {
           )}
         </div>
       </main>
-    </>
+    </div>
   );
 }
