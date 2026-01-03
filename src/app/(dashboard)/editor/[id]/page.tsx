@@ -300,8 +300,8 @@ export default function EditorPage() {
             <div
               className={
                 viewMode === "split"
-                  ? "w-1/2 border-r border-slate-200 dark:border-slate-800 overflow-auto"
-                  : "w-full overflow-auto"
+                  ? "w-1/2 border-r border-slate-200 dark:border-slate-800 overflow-y-auto overscroll-contain"
+                  : "w-full overflow-y-auto overscroll-contain"
               }
             >
               <MarkdownEditor
@@ -318,8 +318,8 @@ export default function EditorPage() {
             <div
               className={
                 viewMode === "split"
-                  ? "w-1/2 overflow-auto bg-white dark:bg-slate-950"
-                  : "w-full overflow-auto bg-white dark:bg-slate-950"
+                  ? "w-1/2 overflow-y-auto overscroll-contain bg-white dark:bg-slate-950"
+                  : "w-full overflow-y-auto overscroll-contain bg-white dark:bg-slate-950"
               }
             >
               <MarkdownPreview content={content} className="h-full" />

@@ -105,7 +105,7 @@ export const MarkdownEditor = forwardRef<
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full h-full min-h-[400px] p-4 resize-none focus:outline-none bg-transparent font-mono text-sm leading-relaxed placeholder:text-muted-foreground overflow-y-auto"
+          className="w-full h-full min-h-[400px] p-4 resize-none focus:outline-none bg-transparent font-mono text-sm leading-relaxed placeholder:text-muted-foreground overflow-y-auto overscroll-contain"
           placeholder="Start writing your markdown here..."
           spellCheck={false}
         />

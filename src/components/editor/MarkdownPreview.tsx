@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
 
 // Import highlight.js theme only when this component is used
@@ -39,7 +40,7 @@ const SimpleCarousel = ({ content }: { content: string }) => {
         <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none prose-pre:my-0 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:text-slate-50 prose-pre:rounded-lg prose-pre:p-3 md:prose-pre:p-4 [&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent [&_pre_code]:p-0 prose-pre:overflow-x-auto">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
+            rehypePlugins={[rehypeRaw, rehypeHighlight]}
           >
             {slides[currentSlide]}
           </ReactMarkdown>
@@ -126,7 +127,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
         "p-3 md:p-6 lg:p-8",
 
         // Prevent overflow
-        "overflow-x-hidden overflow-y-auto",
+        "overflow-x-hidden overflow-y-auto overscroll-contain",
         "[overflow-wrap:break-word] [word-wrap:break-word]",
 
         // Headings - responsive
@@ -190,7 +191,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       {content ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeHighlight]}
+          rehypePlugins={[rehypeRaw, rehypeHighlight]}
           components={{
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || "");
