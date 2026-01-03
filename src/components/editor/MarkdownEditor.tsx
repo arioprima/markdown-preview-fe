@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useRef,
-  useEffect,
-  useCallback,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import { useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Toolbar } from "./Toolbar";
 import { cn } from "@/lib/utils";
 
@@ -30,14 +24,7 @@ export const MarkdownEditor = forwardRef<
     focus: () => textareaRef.current?.focus(),
   }));
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.max(textarea.scrollHeight, 400)}px`;
-    }
-  }, [value]);
+  // No auto-resize - use fixed height with scroll for independent scrolling
 
   const handleToolbarAction = useCallback(
     (action: string, wrapper?: { before: string; after: string }) => {
@@ -112,13 +99,13 @@ export const MarkdownEditor = forwardRef<
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <Toolbar onAction={handleToolbarAction} />
-      <div className="flex-1 relative bg-white dark:bg-slate-950">
+      <div className="flex-1 relative bg-white dark:bg-slate-950 overflow-hidden">
         <textarea
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full h-full min-h-[400px] p-4 resize-none focus:outline-none bg-transparent font-mono text-sm leading-relaxed placeholder:text-muted-foreground"
+          className="w-full h-full min-h-[400px] p-4 resize-none focus:outline-none bg-transparent font-mono text-sm leading-relaxed placeholder:text-muted-foreground overflow-y-auto"
           placeholder="Start writing your markdown here..."
           spellCheck={false}
         />

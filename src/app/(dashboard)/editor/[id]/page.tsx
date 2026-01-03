@@ -300,8 +300,8 @@ export default function EditorPage() {
             <div
               className={
                 viewMode === "split"
-                  ? "w-1/2 border-r border-slate-200 dark:border-slate-800"
-                  : "w-full"
+                  ? "w-1/2 border-r border-slate-200 dark:border-slate-800 overflow-auto"
+                  : "w-full overflow-auto"
               }
             >
               <MarkdownEditor
