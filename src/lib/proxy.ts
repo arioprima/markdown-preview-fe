@@ -50,9 +50,30 @@ export async function proxyRequest(
     });
 
     // Forward Set-Cookie from backend to client
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) {
-      nextResponse.headers.set("Set-Cookie", setCookie);
+    // Use getSetCookie() to properly handle multiple cookies
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies && setCookies.length > 0) {
+      setCookies.forEach((cookie) => {
+        // Fix cookie attributes for localhost development
+        let modifiedCookie = cookie;
+
+        // Remove Domain attribute so cookie works on localhost
+        modifiedCookie = modifiedCookie.replace(/Domain=[^;]+;?\s?/gi, "");
+
+        // If not running in production, adjust Secure and SameSite
+        if (process.env.NODE_ENV !== "production") {
+          // Remove Secure if present to allow HTTP on localhost
+          modifiedCookie = modifiedCookie.replace(/Secure;?\s?/gi, "");
+          // Change SameSite=None to SameSite=Lax for better local dev compatibility
+          // (SameSite=None requires Secure)
+          modifiedCookie = modifiedCookie.replace(
+            /SameSite=None/gi,
+            "SameSite=Lax"
+          );
+        }
+
+        nextResponse.headers.append("Set-Cookie", modifiedCookie);
+      });
     }
 
     return nextResponse;

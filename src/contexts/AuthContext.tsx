@@ -46,9 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    const response = await authApi.login(credentials);
-    // Cookie is set by backend, just update user state
-    setUser(response.data.user);
+    await authApi.login(credentials);
+    // Cookie is set by backend, fetch profile to get user data
+    const profileResponse = await authApi.getProfile();
+    setUser(profileResponse.data);
     router.push("/dashboard");
   };
 
@@ -61,9 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (credentials: RegisterCredentials) => {
-    const response = await authApi.register(credentials);
-    // Cookie is set by backend, just update user state
-    setUser(response.data.user);
+    await authApi.register(credentials);
+    // Cookie is set by backend, fetch profile to get user data
+    const profileResponse = await authApi.getProfile();
+    setUser(profileResponse.data);
     router.push("/dashboard");
   };
 
