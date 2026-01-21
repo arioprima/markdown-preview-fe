@@ -51,7 +51,7 @@ export default function EditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<"split" | "editor" | "preview">(
-    "split"
+    "split",
   );
   const [originalFile, setOriginalFile] = useState<MarkdownFile | null>(null);
 
@@ -283,11 +283,11 @@ export default function EditorPage() {
             </TabsContent>
             <TabsContent
               value="preview"
-              className="flex-1 mt-0 overflow-auto bg-white dark:bg-slate-950"
+              className="flex-1 mt-0 overflow-y-auto overscroll-contain bg-white dark:bg-slate-950 h-full"
             >
               <MarkdownPreview
                 content={content}
-                className="w-full max-w-full"
+                className="w-full max-w-full min-h-full"
               />
             </TabsContent>
           </Tabs>
