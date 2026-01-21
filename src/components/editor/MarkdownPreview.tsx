@@ -7,6 +7,44 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
 
+// Import additional languages for syntax highlighting
+import dart from "highlight.js/lib/languages/dart";
+import go from "highlight.js/lib/languages/go";
+import rust from "highlight.js/lib/languages/rust";
+import swift from "highlight.js/lib/languages/swift";
+import kotlin from "highlight.js/lib/languages/kotlin";
+import scala from "highlight.js/lib/languages/scala";
+import sql from "highlight.js/lib/languages/sql";
+import yaml from "highlight.js/lib/languages/yaml";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
+import nginx from "highlight.js/lib/languages/nginx";
+import graphql from "highlight.js/lib/languages/graphql";
+import lua from "highlight.js/lib/languages/lua";
+import r from "highlight.js/lib/languages/r";
+import matlab from "highlight.js/lib/languages/matlab";
+import arduino from "highlight.js/lib/languages/arduino";
+
+// rehype-highlight options with additional languages
+const rehypeHighlightOptions = {
+  languages: {
+    dart,
+    go,
+    rust,
+    swift,
+    kotlin,
+    scala,
+    sql,
+    yaml,
+    dockerfile,
+    nginx,
+    graphql,
+    lua,
+    r,
+    matlab,
+    arduino,
+  },
+};
+
 // Import highlight.js theme only when this component is used
 import "highlight.js/styles/tokyo-night-dark.css";
 
@@ -40,7 +78,10 @@ const SimpleCarousel = ({ content }: { content: string }) => {
         <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none prose-pre:my-0 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:text-slate-50 prose-pre:rounded-lg prose-pre:p-3 md:prose-pre:p-4 [&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent [&_pre_code]:p-0 prose-pre:overflow-x-auto">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, rehypeHighlight]}
+            rehypePlugins={[
+              rehypeRaw,
+              [rehypeHighlight, rehypeHighlightOptions],
+            ]}
           >
             {slides[currentSlide]}
           </ReactMarkdown>
@@ -185,13 +226,13 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
         // Images
         "prose-img:max-w-full prose-img:h-auto prose-img:rounded-lg",
 
-        className
+        className,
       )}
     >
       {content ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          rehypePlugins={[rehypeRaw, [rehypeHighlight, rehypeHighlightOptions]]}
           components={{
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || "");
