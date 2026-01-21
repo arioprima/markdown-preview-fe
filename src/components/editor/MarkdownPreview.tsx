@@ -3,50 +3,10 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { cn } from "@/lib/utils";
-
-// Import additional languages for syntax highlighting
-import dart from "highlight.js/lib/languages/dart";
-import go from "highlight.js/lib/languages/go";
-import rust from "highlight.js/lib/languages/rust";
-import swift from "highlight.js/lib/languages/swift";
-import kotlin from "highlight.js/lib/languages/kotlin";
-import scala from "highlight.js/lib/languages/scala";
-import sql from "highlight.js/lib/languages/sql";
-import yaml from "highlight.js/lib/languages/yaml";
-import dockerfile from "highlight.js/lib/languages/dockerfile";
-import nginx from "highlight.js/lib/languages/nginx";
-import graphql from "highlight.js/lib/languages/graphql";
-import lua from "highlight.js/lib/languages/lua";
-import r from "highlight.js/lib/languages/r";
-import matlab from "highlight.js/lib/languages/matlab";
-import arduino from "highlight.js/lib/languages/arduino";
-
-// rehype-highlight options with additional languages
-const rehypeHighlightOptions = {
-  languages: {
-    dart,
-    go,
-    rust,
-    swift,
-    kotlin,
-    scala,
-    sql,
-    yaml,
-    dockerfile,
-    nginx,
-    graphql,
-    lua,
-    r,
-    matlab,
-    arduino,
-  },
-};
-
-// Import highlight.js theme only when this component is used
-import "highlight.js/styles/tokyo-night-dark.css";
 
 // --- KOMPONEN CAROUSEL ---
 const SimpleCarousel = ({ content }: { content: string }) => {
@@ -75,13 +35,10 @@ const SimpleCarousel = ({ content }: { content: string }) => {
     <div className="my-4 md:my-6 w-full border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
       {/* Slide Content */}
       <div className="p-3 md:p-6 bg-slate-50 dark:bg-slate-800 min-h-[250px] md:min-h-[400px]">
-        <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none prose-pre:my-0 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-slate-900 prose-pre:text-slate-50 prose-pre:rounded-lg prose-pre:p-3 md:prose-pre:p-4 [&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent [&_pre_code]:p-0 prose-pre:overflow-x-auto">
+        <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={[
-              rehypeRaw,
-              [rehypeHighlight, rehypeHighlightOptions],
-            ]}
+            rehypePlugins={[rehypeRaw]}
           >
             {slides[currentSlide]}
           </ReactMarkdown>
@@ -195,18 +152,6 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
         "prose-code:text-indigo-600 dark:prose-code:text-indigo-400",
         "prose-code:break-words",
 
-        // Code blocks (pre) - horizontal scroll inside
-        "prose-pre:bg-[#1a1b26] dark:prose-pre:bg-[#1a1b26]",
-        "prose-pre:text-slate-50 prose-pre:rounded-lg",
-        "prose-pre:p-3 md:prose-pre:p-4 lg:prose-pre:p-6",
-        "prose-pre:my-3 md:prose-pre:my-6",
-        "prose-pre:overflow-x-auto prose-pre:max-w-full",
-        "prose-pre:shadow-lg md:prose-pre:shadow-2xl",
-        "prose-pre:border prose-pre:border-slate-800",
-        "[&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent",
-        "[&_pre_code]:p-0 [&_pre_code]:text-xs md:[&_pre_code]:text-sm",
-        "[&_pre_code]:whitespace-pre",
-
         // Blockquotes
         "prose-blockquote:border-l-4 prose-blockquote:border-indigo-500",
         "prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-slate-900",
@@ -232,12 +177,13 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       {content ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, [rehypeHighlight, rehypeHighlightOptions]]}
+          rehypePlugins={[rehypeRaw]}
           components={{
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || "");
               const lang = match ? match[1] : "";
 
+              // Handle carousel
               if (!inline && lang === "carousel") {
                 return (
                   <SimpleCarousel
@@ -246,6 +192,32 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
                 );
               }
 
+              // Code block (not inline)
+              if (!inline && lang) {
+                return (
+                  <SyntaxHighlighter
+                    style={vscDarkPlus}
+                    language={lang}
+                    PreTag="div"
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: "0.5rem",
+                      fontSize: "0.875rem",
+                    }}
+                    codeTagProps={{
+                      style: {
+                        fontFamily:
+                          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                      },
+                    }}
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                );
+              }
+
+              // Inline code or code block without language
               return (
                 <code className={className} {...props}>
                   {children}
