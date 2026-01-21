@@ -28,7 +28,8 @@ jobs:
 
             cd /var/www/markdown-preview/markdown-preview-fe 
             git pull origin prod-v1
-            npm install --production
+            npm install
             npm run build
-            pm2 restart markdown-preview || pm2 start ecosystem.config.js
+            npm prune --production
+            pm2 restart markdown-preview-fe || pm2 start ecosystem.config.js
             echo "Deployment completed at $(date)"

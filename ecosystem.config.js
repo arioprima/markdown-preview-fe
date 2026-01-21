@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "markdown-preview",
+      name: "markdown-preview-fe",
       script: "node_modules/next/dist/bin/next",
       args: "start",
       cwd: "/var/www/markdown-preview/markdown-preview-fe",
