@@ -261,8 +261,8 @@ export default function EditorPage() {
       {/* Editor Content */}
       <main className="flex-1 flex overflow-hidden">
         {/* Mobile: Tabs View */}
-        <div className="flex-1 md:hidden overflow-hidden">
-          <Tabs defaultValue="edit" className="h-full flex flex-col">
+        <div className="flex-1 md:hidden flex flex-col overflow-hidden">
+          <Tabs defaultValue="edit" className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full rounded-none border-b shrink-0">
               <TabsTrigger value="edit" className="flex-1 gap-1.5 text-sm">
                 <Edit className="h-3.5 w-3.5" />
@@ -273,7 +273,10 @@ export default function EditorPage() {
                 Preview
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="edit" className="flex-1 mt-0 overflow-hidden">
+            <TabsContent
+              value="edit"
+              className="flex-1 mt-0 min-h-0 overflow-hidden"
+            >
               <MarkdownEditor
                 ref={editorRef}
                 value={content}
@@ -283,11 +286,12 @@ export default function EditorPage() {
             </TabsContent>
             <TabsContent
               value="preview"
-              className="flex-1 mt-0 overflow-y-auto overscroll-contain bg-white dark:bg-slate-950 h-full"
+              className="flex-1 mt-0 min-h-0 overflow-y-auto bg-white dark:bg-slate-950"
+              style={{ WebkitOverflowScrolling: "touch" }}
             >
               <MarkdownPreview
                 content={content}
-                className="w-full max-w-full min-h-full"
+                className="w-full max-w-full"
               />
             </TabsContent>
           </Tabs>
