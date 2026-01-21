@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main
+      - prod-v1
 
 jobs:
   deploy:
@@ -26,9 +26,9 @@ jobs:
             [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             export PATH="$PATH:/usr/local/bin:/usr/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node)/bin"
 
-            cd /var/www/karyacodelab.com
-            git pull origin main
+            cd /var/www/markdown-preview/markdown-preview-fe 
+            git pull origin prod-v1
             npm install --production
             npm run build
-            pm2 restart karyacodelab || pm2 start ecosystem.config.js
+            pm2 restart markdown-preview || pm2 start ecosystem.config.js
             echo "Deployment completed at $(date)"
