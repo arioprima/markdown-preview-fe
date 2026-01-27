@@ -10,6 +10,7 @@ import {
   ChangePasswordData,
   UpdateProfileData,
   CountResponse,
+  Group,
 } from "@/types";
 
 // Create axios instance - uses Next.js API routes as proxy
@@ -42,21 +43,21 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============ AUTH API ============
 
 export const authApi = {
   login: async (
-    credentials: LoginCredentials
+    credentials: LoginCredentials,
   ): Promise<ApiResponse<AuthResponse>> => {
     const response = await api.post("/auth/login", credentials);
     return response.data;
   },
 
   register: async (
-    credentials: RegisterCredentials
+    credentials: RegisterCredentials,
   ): Promise<ApiResponse<AuthResponse>> => {
     const response = await api.post("/auth/register", credentials);
     return response.data;
@@ -68,14 +69,14 @@ export const authApi = {
   },
 
   updateProfile: async (
-    data: UpdateProfileData
+    data: UpdateProfileData,
   ): Promise<ApiResponse<User>> => {
     const response = await api.put("/auth/profile", data);
     return response.data;
   },
 
   changePassword: async (
-    data: ChangePasswordData
+    data: ChangePasswordData,
   ): Promise<ApiResponse<null>> => {
     const response = await api.put("/auth/change-password", data);
     return response.data;
@@ -113,6 +114,7 @@ export const filesApi = {
     orderBy?: string;
     order?: "asc" | "desc";
     search?: string;
+    ungrouped?: boolean;
   }): Promise<PaginatedResponse<MarkdownFile>> => {
     const response = await api.get("/files", { params });
     return response.data;
@@ -135,30 +137,51 @@ export const filesApi = {
 
   create: async (
     title: string,
-    content: string
+    content: string,
+    groupId?: string | null,
   ): Promise<ApiResponse<MarkdownFile>> => {
-    const response = await api.post(
-      `/files?title=${encodeURIComponent(title)}`,
-      content,
-      {
-        headers: { "Content-Type": "text/plain" },
-      }
-    );
+    let url = `/files?title=${encodeURIComponent(title)}`;
+    if (groupId) {
+      url += `&group_id=${encodeURIComponent(groupId)}`;
+    }
+    const response = await api.post(url, content, {
+      headers: { "Content-Type": "text/plain" },
+    });
     return response.data;
   },
 
   update: async (
     id: string,
     title: string,
-    content: string
+    content: string,
+    groupId?: string | null,
   ): Promise<ApiResponse<MarkdownFile>> => {
-    const response = await api.put(
-      `/files/${id}?title=${encodeURIComponent(title)}`,
-      content,
-      {
-        headers: { "Content-Type": "text/plain" },
-      }
-    );
+    let url = `/files/${id}?title=${encodeURIComponent(title)}`;
+    if (groupId !== undefined) {
+      url += `&group_id=${groupId === null ? "" : encodeURIComponent(groupId)}`;
+    }
+    const response = await api.put(url, content, {
+      headers: { "Content-Type": "text/plain" },
+    });
+    return response.data;
+  },
+
+  updateGroup: async (
+    id: string,
+    groupId: string | null,
+  ): Promise<ApiResponse<MarkdownFile>> => {
+    // First fetch the file to get current content and title
+    const fileResponse = await api.get(`/files/${id}`);
+    const file = fileResponse.data.data;
+
+    // Build URL with title and group_id
+    let url = `/files/${id}?title=${encodeURIComponent(file.title || "")}`;
+    url += `&group_id=${groupId === null ? "" : encodeURIComponent(groupId)}`;
+
+    // Send update with existing content preserved
+    const response = await api.put(url, file.content || "", {
+      headers: { "Content-Type": "text/plain" },
+    });
     return response.data;
   },
 
@@ -206,6 +229,38 @@ export const trashApi = {
 
   emptyTrash: async (): Promise<ApiResponse<null>> => {
     const response = await api.delete("/files/trash");
+    return response.data;
+  },
+};
+
+// ============ GROUPS API ============
+
+export const groupsApi = {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Group>> => {
+    const response = await api.get("/groups", { params });
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<ApiResponse<Group>> => {
+    const response = await api.get(`/groups/${id}`);
+    return response.data;
+  },
+
+  create: async (name: string): Promise<ApiResponse<Group>> => {
+    const response = await api.post("/groups", { name });
+    return response.data;
+  },
+
+  update: async (id: string, name: string): Promise<ApiResponse<Group>> => {
+    const response = await api.put(`/groups/${id}`, { name });
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<ApiResponse<null>> => {
+    const response = await api.delete(`/groups/${id}`);
     return response.data;
   },
 };

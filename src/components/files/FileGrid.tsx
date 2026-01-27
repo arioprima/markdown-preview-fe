@@ -1,6 +1,6 @@
 "use client";
 
-import { MarkdownFile } from "@/types";
+import { MarkdownFile, Group } from "@/types";
 import { FileCard } from "./FileCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Plus } from "lucide-react";
@@ -9,10 +9,23 @@ import { Button } from "@/components/ui/button";
 
 interface FileGridProps {
   files: MarkdownFile[];
+  groups?: Group[];
   isLoading?: boolean;
+  isDraggable?: boolean;
 }
 
-export function FileGrid({ files, isLoading }: FileGridProps) {
+export function FileGrid({
+  files,
+  groups = [],
+  isLoading,
+  isDraggable = true,
+}: FileGridProps) {
+  // Helper to find group for a file
+  const getGroupForFile = (file: MarkdownFile): Group | null => {
+    if (!file.group_id) return null;
+    return groups.find((g) => g.id === file.group_id) || null;
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -49,7 +62,12 @@ export function FileGrid({ files, isLoading }: FileGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {files.map((file) => (
-        <FileCard key={file.id} file={file} />
+        <FileCard
+          key={file.id}
+          file={file}
+          group={getGroupForFile(file)}
+          isDraggable={isDraggable}
+        />
       ))}
     </div>
   );

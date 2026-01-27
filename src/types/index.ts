@@ -13,10 +13,22 @@ export interface MarkdownFile {
   title: string;
   content: string;
   user_id: string;
+  group_id: string | null;
   is_deleted: boolean;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Group types
+export interface Group {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  markdownFiles?: MarkdownFile[];
 }
 
 // API Response types
