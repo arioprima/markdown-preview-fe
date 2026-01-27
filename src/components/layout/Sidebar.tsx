@@ -92,7 +92,7 @@ function GroupItem({
     <div
       ref={setNodeRef}
       className={cn(
-        "group flex items-center gap-2 px-3 py-4 rounded-xl transition-all cursor-pointer",
+        "group flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer",
         isActive
           ? "bg-slate-100 dark:bg-slate-800"
           : "hover:bg-slate-50 dark:hover:bg-slate-900",
@@ -345,7 +345,7 @@ function AllFilesSection({
   });
 
   return (
-    <div className="p-3">
+    <div className="px-3 py-1">
       <div
         ref={setNodeRef}
         className={cn(
@@ -393,7 +393,7 @@ function AllFilesSection({
           No ungrouped files
         </p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-0">
           {files.map((file) => (
             <SidebarFileItem
               key={file.id}
@@ -746,7 +746,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
               + New project
             </button>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-0">
               {groups.map((group) => (
                 <GroupItem
                   key={group.id}

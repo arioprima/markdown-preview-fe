@@ -89,14 +89,7 @@ export function FileCard({ file, group, isDraggable = true }: FileCardProps) {
                 </h3>
               </div>
               <div className="flex gap-1">
-                {group && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs flex-shrink-0 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
-                  >
-                    {group.name}
-                  </Badge>
-                )}
+                {/* Group badge removed as per request */}
                 <Badge variant="secondary" className="text-xs flex-shrink-0">
                   .md
                 </Badge>

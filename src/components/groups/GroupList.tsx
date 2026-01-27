@@ -129,7 +129,7 @@ export function GroupList({
 
       {/* Group Cards */}
       {groups.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-0.5">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2">
             Groups
           </p>

@@ -83,11 +83,11 @@ export function GroupCard({
       )}
       onClick={() => !isEditing && onSelect(group.id)}
     >
-      <CardContent className="p-4">
+      <CardContent className="py-1 px-2">
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+              "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
               isActive
                 ? "bg-indigo-500 text-white"
                 : "bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50",
@@ -95,7 +95,7 @@ export function GroupCard({
           >
             <FolderOpen
               className={cn(
-                "w-5 h-5",
+                "w-4 h-4",
                 !isActive && "text-indigo-600 dark:text-indigo-400",
               )}
             />
