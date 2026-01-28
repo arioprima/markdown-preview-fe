@@ -12,6 +12,7 @@ interface FileGridProps {
   groups?: Group[];
   isLoading?: boolean;
   isDraggable?: boolean;
+  showGroup?: boolean;
 }
 
 export function FileGrid({
@@ -19,6 +20,7 @@ export function FileGrid({
   groups = [],
   isLoading,
   isDraggable = true,
+  showGroup = true,
 }: FileGridProps) {
   // Helper to find group for a file
   const getGroupForFile = (file: MarkdownFile): Group | null => {
@@ -67,6 +69,7 @@ export function FileGrid({
           file={file}
           group={getGroupForFile(file)}
           isDraggable={isDraggable}
+          showGroup={showGroup}
         />
       ))}
     </div>

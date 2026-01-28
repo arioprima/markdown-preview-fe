@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MarkdownFile, Group } from "@/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Calendar, GripVertical } from "lucide-react";
+import { FileText, Calendar, GripVertical, FolderOpen } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -14,9 +14,15 @@ interface FileCardProps {
   file: MarkdownFile;
   group?: Group | null;
   isDraggable?: boolean;
+  showGroup?: boolean;
 }
 
-export function FileCard({ file, group, isDraggable = true }: FileCardProps) {
+export function FileCard({
+  file,
+  group,
+  isDraggable = true,
+  showGroup = false,
+}: FileCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `file-${file.id}`,
@@ -88,9 +94,8 @@ export function FileCard({ file, group, isDraggable = true }: FileCardProps) {
                   {file.title || "Untitled"}
                 </h3>
               </div>
-              <div className="flex gap-1">
-                {/* Group badge removed as per request */}
-                <Badge variant="secondary" className="text-xs flex-shrink-0">
+              <div className="flex gap-1 flex-shrink-0">
+                <Badge variant="secondary" className="text-xs">
                   .md
                 </Badge>
               </div>
@@ -100,9 +105,27 @@ export function FileCard({ file, group, isDraggable = true }: FileCardProps) {
             <p className="text-sm text-muted-foreground line-clamp-3 mb-4 min-h-[3.75rem]">
               {getPreview(file.content)}
             </p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="w-3 h-3" />
-              <span>{formatDistanceToNow(file.created_at)}</span>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3 h-3" />
+                <span>
+                  {formatDistanceToNow(file.updated_at || file.created_at)}
+                </span>
+              </div>
+              {showGroup && (
+                <div className="flex items-center gap-1">
+                  {group ? (
+                    <>
+                      <FolderOpen className="w-3 h-3" />
+                      <span className="truncate max-w-[100px]">
+                        {group.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">(No group)</span>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

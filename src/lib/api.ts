@@ -240,6 +240,7 @@ export const groupsApi = {
   getAll: async (params?: {
     page?: number;
     limit?: number;
+    search?: string;
   }): Promise<PaginatedResponse<Group>> => {
     const response = await api.get("/groups", { params });
     return response.data;

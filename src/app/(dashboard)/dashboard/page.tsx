@@ -13,55 +13,64 @@ import {
   FolderOpen,
   Plus,
   FileText,
+  Files,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const groupId = searchParams.get("group");
+  const isUngrouped = searchParams.get("ungrouped") === "true";
 
   const [files, setFiles] = useState<MarkdownFile[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
   const limit = 12;
 
-  // Fetch files - only when viewing a specific group
+  // Fetch files with proper API parameters
   const fetchFiles = useCallback(async () => {
-    if (!groupId) {
-      setFiles([]);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Fetch more files to ensure we get all files for this group
-      // Since backend doesn't support group_id filtering, we do client-side filtering
-      const response = await filesApi.getAll({
-        limit: 100, // Fetch more to get all group files
-        orderBy: "created_at",
+      const params: {
+        page: number;
+        limit: number;
+        orderBy: string;
+        order: "desc" | "asc";
+        group_id?: string;
+        ungrouped?: boolean;
+      } = {
+        page,
+        limit,
+        orderBy: "updated_at",
         order: "desc",
-        search: searchQuery || undefined,
-      });
-      // Filter by group
-      const groupFiles = response.data.filter((f) => f.group_id === groupId);
+      };
 
-      // Paginate client-side
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedFiles = groupFiles.slice(startIndex, endIndex);
+      // Apply filters based on URL params
+      if (groupId) {
+        params.group_id = groupId;
+      } else if (isUngrouped) {
+        params.ungrouped = true;
+      }
+      // If neither groupId nor isUngrouped, fetch all files (no filter)
 
-      setFiles(paginatedFiles);
-      setTotalPages(Math.ceil(groupFiles.length / limit) || 1);
+      const response = await filesApi.getAll(params);
+      setFiles(response.data);
+      setTotalPages(response.pagination.totalPages || 1);
+      setTotalFiles(response.pagination.total || 0);
+      setHasNextPage(response.pagination.hasNextPage || false);
+      setHasPrevPage(response.pagination.hasPrevPage || false);
     } catch (error) {
       console.error("Failed to fetch files:", error);
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchQuery, groupId, limit]);
+  }, [page, groupId, isUngrouped, limit]);
 
   // Fetch groups
   const fetchGroups = useCallback(async () => {
@@ -73,16 +82,14 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Reset page when filter changes
   useEffect(() => {
-    const debounce = setTimeout(
-      () => {
-        fetchFiles();
-      },
-      searchQuery ? 300 : 0,
-    );
+    setPage(1);
+  }, [groupId, isUngrouped]);
 
-    return () => clearTimeout(debounce);
-  }, [fetchFiles, searchQuery]);
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
   useEffect(() => {
     fetchGroups();
@@ -91,24 +98,45 @@ export default function DashboardPage() {
   // Get current group name
   const currentGroup = groupId ? groups.find((g) => g.id === groupId) : null;
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setPage(1);
-  };
-
   const handleCreateNew = () => {
-    router.push("/editor/new");
+    if (groupId) {
+      router.push(`/editor/new?group=${groupId}`);
+    } else {
+      router.push("/editor/new");
+    }
   };
 
-  // If no group selected, show welcome/create page
-  if (!groupId) {
+  // Determine page title and icon
+  const getPageInfo = () => {
+    if (groupId && currentGroup) {
+      return {
+        title: currentGroup.name,
+        icon: FolderOpen,
+        subtitle: `${totalFiles} file${totalFiles !== 1 ? "s" : ""} in this project`,
+      };
+    } else if (isUngrouped) {
+      return {
+        title: "Ungrouped Files",
+        icon: FileText,
+        subtitle: `${totalFiles} file${totalFiles !== 1 ? "s" : ""} without a project`,
+      };
+    } else {
+      return {
+        title: "All Files",
+        icon: Files,
+        subtitle: `${totalFiles} file${totalFiles !== 1 ? "s" : ""} total`,
+      };
+    }
+  };
+
+  const pageInfo = getPageInfo();
+  const PageIcon = pageInfo.icon;
+
+  // Show welcome page when no project is selected (default view)
+  if (!groupId && !isUngrouped) {
     return (
       <>
-        <Header
-          onSearch={handleSearch}
-          searchQuery={searchQuery}
-          groupId={groupId}
-        />
+        <Header groupId={groupId} />
 
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <div className="max-w-4xl mx-auto">
@@ -196,31 +224,24 @@ export default function DashboardPage() {
     );
   }
 
-  // Show group content when a group is selected
+  // Show file list
   return (
     <>
-      <Header
-        onSearch={handleSearch}
-        searchQuery={searchQuery}
-        groupId={groupId}
-      />
+      <Header groupId={groupId} />
 
       <main className="flex-1 p-4 lg:p-6 overflow-auto">
         <div className="max-w-7xl mx-auto">
           {/* Page Title */}
           <div className="mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
-                <FolderOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {currentGroup?.name || "Project"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {files.length} file{files.length !== 1 ? "s" : ""} in this
-                  project
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
+                  <PageIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">{pageInfo.title}</h1>
+                  <p className="text-muted-foreground">{pageInfo.subtitle}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -235,7 +256,7 @@ export default function DashboardPage() {
                 variant="outline"
                 size="icon"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || isLoading}
+                disabled={!hasPrevPage || isLoading}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -246,7 +267,7 @@ export default function DashboardPage() {
                 variant="outline"
                 size="icon"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || isLoading}
+                disabled={!hasNextPage || isLoading}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

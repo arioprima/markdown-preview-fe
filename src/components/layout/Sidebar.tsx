@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,34 +19,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText,
-  Files,
   Trash2,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Plus,
-  Clock,
   FolderOpen,
   MoreHorizontal,
   Pencil,
   Trash,
   Check,
   X,
+  Search,
+  MessageSquare,
   GripVertical,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { filesApi, groupsApi } from "@/lib/api";
-import { MarkdownFile, Group } from "@/types";
+import { Group, MarkdownFile } from "@/types";
 import { useRouter } from "next/navigation";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 
-const menuItems = [
-  { href: "/dashboard", icon: Files, label: "All Files" },
-  { href: "/trash", icon: Trash2, label: "Trash" },
-];
+const menuItems = [{ href: "/trash", icon: Trash2, label: "Trash" }];
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -57,11 +57,15 @@ function GroupItem({
   isActive,
   onUpdate,
   onDelete,
+  isUpdating,
+  isDeleting,
 }: {
   group: Group;
   isActive: boolean;
   onUpdate: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  isUpdating?: boolean;
+  isDeleting?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group.name);
@@ -117,23 +121,30 @@ function GroupItem({
             onKeyDown={handleKeyDown}
             className="h-6 text-sm py-0 px-1"
             autoFocus
+            disabled={isUpdating}
             onClick={(e) => e.stopPropagation()}
           />
           <Button
             size="icon"
             variant="ghost"
             className="h-5 w-5"
+            disabled={isUpdating}
             onClick={(e) => {
               e.stopPropagation();
               handleSave();
             }}
           >
-            <Check className="h-3 w-3 text-green-600" />
+            {isUpdating ? (
+              <Loader2 className="h-3 w-3 animate-spin text-green-600" />
+            ) : (
+              <Check className="h-3 w-3 text-green-600" />
+            )}
           </Button>
           <Button
             size="icon"
             variant="ghost"
             className="h-5 w-5"
+            disabled={isUpdating}
             onClick={(e) => {
               e.stopPropagation();
               setEditName(group.name);
@@ -147,266 +158,111 @@ function GroupItem({
         <>
           <Link
             href={`/dashboard?group=${group.id}`}
-            className="flex-1 text-sm truncate"
+            className={cn(
+              "flex-1 text-sm truncate",
+              (isUpdating || isDeleting) && "opacity-50",
+            )}
           >
             {group.name}
           </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditing(true);
-                }}
-              >
-                <Pencil className="h-3 w-3 mr-2" />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(group.id);
-                }}
-              >
-                <Trash className="h-3 w-3 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={isUpdating || isDeleting}
+                >
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                >
+                  <Pencil className="h-3 w-3 mr-2" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(group.id);
+                  }}
+                >
+                  <Trash className="h-3 w-3 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </>
       )}
     </div>
   );
 }
 
-// Sidebar File Item with Move Menu AND Drag-Drop
-function SidebarFileItem({
+// Draggable File Item Component
+function DraggableFileItem({
   file,
   isActive,
   formatDate,
-  groups,
-  onMoveToGroup,
 }: {
   file: MarkdownFile;
   isActive: boolean;
   formatDate: (date: string) => string;
-  groups: Group[];
-  onMoveToGroup: (fileId: string, groupId: string | null) => void;
 }) {
-  const router = useRouter();
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `sidebar-file-${file.id}`,
-      data: {
-        type: "file",
-        fileId: file.id,
-        file: file,
-      },
-    });
-
-  const handleClick = () => {
-    if (!isDragging) {
-      router.push(`/editor/${file.id}`);
-    }
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn("group/file relative", isDragging && "opacity-40")}
-    >
-      <div
-        className={cn(
-          "w-full flex items-center gap-2 h-auto py-2 px-3 text-left rounded-lg transition-colors",
-          isActive
-            ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
-            : "hover:bg-slate-100 dark:hover:bg-slate-800",
-        )}
-      >
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
-        >
-          <GripVertical className="h-3 w-3 text-slate-400" />
-        </div>
-        <FileText className="h-4 w-4 flex-shrink-0 text-slate-400" />
-        <div
-          className="flex-1 min-w-0 cursor-pointer"
-          onClick={() => router.push(`/editor/${file.id}`)}
-        >
-          <p className="text-sm font-medium truncate">
-            {file.title || "Untitled"}
-          </p>
-          {file.updated_at && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {formatDate(file.updated_at)}
-            </p>
-          )}
-        </div>
-
-        {/* Move to Group Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover/file:opacity-100 transition-opacity flex-shrink-0"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/editor/${file.id}`);
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Open
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">
-              Move to Project
-            </div>
-            {groups.map((group) => (
-              <DropdownMenuItem
-                key={group.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMoveToGroup(file.id, group.id);
-                }}
-                disabled={file.group_id === group.id}
-              >
-                <FolderOpen className="h-4 w-4 mr-2" />
-                {group.name}
-                {file.group_id === group.id && (
-                  <Check className="h-3 w-3 ml-auto text-green-600" />
-                )}
-              </DropdownMenuItem>
-            ))}
-            {file.group_id && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMoveToGroup(file.id, null);
-                  }}
-                  className="text-orange-600"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Remove from Project
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-}
-
-// All Files Section - Droppable to remove files from groups
-function AllFilesSection({
-  isLoading,
-  files,
-  pathname,
-  formatDate,
-  groups,
-  onMoveToGroup,
-}: {
-  isLoading: boolean;
-  files: MarkdownFile[];
-  pathname: string;
-  formatDate: (date: string) => string;
-  groups: Group[];
-  onMoveToGroup: (fileId: string, groupId: string | null) => void;
-}) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: "group-ungrouped",
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `file-${file.id}`,
     data: {
-      type: "group",
-      groupId: null,
+      type: "file",
+      fileId: file.id,
+      file: file,
     },
   });
 
   return (
-    <div className="px-3 py-1">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex items-center gap-1 px-2 py-2 rounded-lg transition-colors",
+        isActive
+          ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
+          : "hover:bg-slate-50 dark:hover:bg-slate-900",
+        isDragging && "opacity-40",
+      )}
+    >
+      {/* Drag Handle */}
       <div
-        ref={setNodeRef}
-        className={cn(
-          "flex items-center gap-2 px-3 py-3 mb-2 rounded-xl transition-all duration-200 min-h-[44px]",
-          isOver &&
-            "ring-2 ring-green-500 bg-green-100 dark:bg-green-900/50 scale-[1.02] shadow-lg shadow-green-500/20",
-        )}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
       >
-        <Files
-          className={cn(
-            "h-5 w-5 transition-colors",
-            isOver
-              ? "text-green-600 dark:text-green-400"
-              : "text-slate-500 dark:text-slate-400",
-          )}
-        />
-        <span
-          className={cn(
-            "text-xs font-semibold uppercase tracking-wide transition-colors",
-            isOver
-              ? "text-green-600 dark:text-green-400"
-              : "text-slate-500 dark:text-slate-400",
-          )}
-        >
-          All Files
-        </span>
-        {isOver && (
-          <span className="text-xs text-green-600 dark:text-green-400 ml-auto font-medium">
-            Drop to remove from project
-          </span>
-        )}
+        <GripVertical className="h-3 w-3 text-slate-400" />
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-10 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"
-            />
-          ))}
+      {/* Clickable Link */}
+      <Link
+        href={`/editor/${file.id}`}
+        className="flex-1 min-w-0 flex items-center gap-2"
+      >
+        <FileText className="h-4 w-4 flex-shrink-0 text-slate-400" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">
+            {file.title || "Untitled"}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {formatDate(file.updated_at)}
+          </p>
         </div>
-      ) : files.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-          No ungrouped files
-        </p>
-      ) : (
-        <div className="space-y-0">
-          {files.map((file) => (
-            <SidebarFileItem
-              key={file.id}
-              file={file}
-              isActive={pathname === `/editor/${file.id}`}
-              formatDate={formatDate}
-              groups={groups}
-              onMoveToGroup={onMoveToGroup}
-            />
-          ))}
-        </div>
-      )}
+      </Link>
     </div>
   );
 }
@@ -416,48 +272,74 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const { user, logout } = useAuth();
   const { collapsed, setCollapsed } = useSidebar();
   const router = useRouter();
-  const [recentFiles, setRecentFiles] = useState<MarkdownFile[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ungroupedFiles, setUngroupedFiles] = useState<MarkdownFile[]>([]);
+  const [isFilesLoading, setIsFilesLoading] = useState(true);
   const [isGroupsLoading, setIsGroupsLoading] = useState(true);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [updatingGroupId, setUpdatingGroupId] = useState<string | null>(null);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 
-  // Fetch ungrouped files only
+  // Group search and show more state
+  const [groupSearch, setGroupSearch] = useState("");
+  const [showAllGroups, setShowAllGroups] = useState(false);
+  const [isSearchingGroups, setIsSearchingGroups] = useState(false);
+  const GROUPS_LIMIT = 5;
+
+  // Fetch ungrouped files
   useEffect(() => {
-    const fetchFiles = async () => {
+    const fetchUngroupedFiles = async () => {
       try {
         const response = await filesApi.getAll({
-          limit: 50,
+          limit: 20,
           orderBy: "updated_at",
           order: "desc",
           ungrouped: true,
         });
-        setRecentFiles(response.data);
+        setUngroupedFiles(response.data);
       } catch (error) {
         console.error("Failed to fetch files:", error);
       } finally {
-        setIsLoading(false);
+        setIsFilesLoading(false);
       }
     };
-    fetchFiles();
+    fetchUngroupedFiles();
   }, []);
 
-  // Fetch groups
+  // Fetch groups with search support
   useEffect(() => {
     const fetchGroups = async () => {
+      setIsSearchingGroups(true);
       try {
-        const response = await groupsApi.getAll({ limit: 100 });
+        const response = await groupsApi.getAll({
+          limit: 100,
+          search: groupSearch || undefined,
+        });
         setGroups(response.data);
       } catch (error) {
         console.error("Failed to fetch groups:", error);
       } finally {
         setIsGroupsLoading(false);
+        setIsSearchingGroups(false);
       }
     };
-    fetchGroups();
-  }, []);
+
+    // Debounce search
+    const timer = setTimeout(fetchGroups, groupSearch ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [groupSearch]);
+
+  // Computed: visible groups (limit 5 or show all)
+  const visibleGroups = useMemo(() => {
+    if (showAllGroups || groupSearch) {
+      return groups;
+    }
+    return groups.slice(0, GROUPS_LIMIT);
+  }, [groups, showAllGroups, groupSearch]);
+
+  const hasMoreGroups = groups.length > GROUPS_LIMIT && !groupSearch;
 
   const getInitials = (name: string) => {
     return name
@@ -506,6 +388,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   };
 
   const handleUpdateGroup = async (id: string, name: string) => {
+    setUpdatingGroupId(id);
     try {
       const response = await groupsApi.update(id, name);
       setGroups((prev) => prev.map((g) => (g.id === id ? response.data : g)));
@@ -513,10 +396,13 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
     } catch (error) {
       console.error("Failed to update group:", error);
       toast.error("Failed to update group");
+    } finally {
+      setUpdatingGroupId(null);
     }
   };
 
   const handleDeleteGroup = async (id: string) => {
+    setDeletingGroupId(id);
     try {
       await groupsApi.delete(id);
       setGroups((prev) => prev.filter((g) => g.id !== id));
@@ -524,26 +410,8 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
     } catch (error) {
       console.error("Failed to delete group:", error);
       toast.error("Failed to delete group");
-    }
-  };
-
-  const handleMoveToGroup = async (fileId: string, groupId: string | null) => {
-    try {
-      await filesApi.updateGroup(fileId, groupId);
-      // Refresh files list
-      const response = await filesApi.getAll({
-        limit: 50,
-        orderBy: "updated_at",
-        order: "desc",
-        ungrouped: true,
-      });
-      setRecentFiles(response.data);
-      toast.success(
-        groupId ? "File moved to project" : "File removed from project",
-      );
-    } catch (error) {
-      console.error("Failed to move file:", error);
-      toast.error("Failed to move file");
+    } finally {
+      setDeletingGroupId(null);
     }
   };
 
@@ -661,22 +529,9 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
 
       <Separator />
 
-      {/* New File Button */}
-      <div className="p-3">
-        <Button
-          onClick={createNewFile}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Document
-        </Button>
-      </div>
-
-      <Separator />
-
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        {/* Projects Section (formerly Groups) - ChatGPT Style */}
+        {/* Projects Section (formerly Groups) */}
         <div className="p-3">
           <div className="flex items-center justify-between px-2 py-1 mb-2">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -691,6 +546,22 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
             >
               <Plus className="h-3 w-3" />
             </Button>
+          </div>
+
+          {/* Search Projects Input */}
+          <div className="relative mb-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              value={groupSearch}
+              onChange={(e) => setGroupSearch(e.target.value)}
+              placeholder="Search projects..."
+              className="h-8 text-sm pl-8 pr-3"
+            />
+            {isSearchingGroups && (
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <div className="h-3 w-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
 
           {/* Create Project Input */}
@@ -760,32 +631,105 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
             >
               + New project
             </button>
+          ) : showAllGroups || groupSearch ? (
+            // Show all groups with scroll area
+            <ScrollArea className="h-[200px]">
+              <div className="space-y-0 pr-2">
+                {visibleGroups.map((group) => (
+                  <GroupItem
+                    key={group.id}
+                    group={group}
+                    isActive={pathname.includes(`group=${group.id}`)}
+                    onUpdate={handleUpdateGroup}
+                    onDelete={handleDeleteGroup}
+                    isUpdating={updatingGroupId === group.id}
+                    isDeleting={deletingGroupId === group.id}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
           ) : (
+            // Show limited groups (max 5)
             <div className="space-y-0">
-              {groups.map((group) => (
+              {visibleGroups.map((group) => (
                 <GroupItem
                   key={group.id}
                   group={group}
                   isActive={pathname.includes(`group=${group.id}`)}
                   onUpdate={handleUpdateGroup}
                   onDelete={handleDeleteGroup}
+                  isUpdating={updatingGroupId === group.id}
+                  isDeleting={deletingGroupId === group.id}
                 />
               ))}
             </div>
+          )}
+
+          {/* More Button */}
+          {hasMoreGroups && !groupSearch && (
+            <button
+              onClick={() => setShowAllGroups(!showAllGroups)}
+              className="w-full flex items-center justify-center gap-1.5 px-2 py-2 mt-1 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg transition-colors"
+            >
+              {showAllGroups ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  More ({groups.length - GROUPS_LIMIT} more)
+                </>
+              )}
+            </button>
+          )}
+
+          {/* No results */}
+          {groupSearch && groups.length === 0 && !isSearchingGroups && (
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-3">
+              No projects found
+            </p>
           )}
         </div>
 
         <Separator />
 
-        {/* All Files - Droppable to remove from groups */}
-        <AllFilesSection
-          isLoading={isLoading}
-          files={recentFiles}
-          pathname={pathname}
-          formatDate={formatDate}
-          groups={groups}
-          onMoveToGroup={handleMoveToGroup}
-        />
+        {/* Chats Section - Ungrouped Files */}
+        <div className="p-3">
+          <div className="flex items-center gap-2 px-2 py-1 mb-2">
+            <MessageSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+              Chats
+            </span>
+          </div>
+
+          {isFilesLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-10 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"
+                />
+              ))}
+            </div>
+          ) : ungroupedFiles.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+              No chats yet
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {ungroupedFiles.map((file) => (
+                <DraggableFileItem
+                  key={file.id}
+                  file={file}
+                  isActive={pathname === `/editor/${file.id}`}
+                  formatDate={formatDate}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Separator />

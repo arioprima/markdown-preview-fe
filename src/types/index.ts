@@ -46,7 +46,17 @@ export interface PaginatedResponse<T> {
     limit: number;
     total: number;
     totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
   };
+}
+
+// Extended MarkdownFile with group info from search
+export interface MarkdownFileWithGroup extends MarkdownFile {
+  group?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface AuthResponse {
