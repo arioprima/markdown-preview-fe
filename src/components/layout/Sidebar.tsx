@@ -32,6 +32,7 @@ import {
   Trash,
   Check,
   X,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { filesApi, groupsApi } from "@/lib/api";
@@ -214,15 +215,8 @@ function SidebarFileItem({
       },
     });
 
-  const style = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-        zIndex: isDragging ? 100 : undefined,
-      }
-    : undefined;
-
   const handleClick = () => {
-    if (!isDragging && !transform) {
+    if (!isDragging) {
       router.push(`/editor/${file.id}`);
     }
   };
@@ -230,22 +224,29 @@ function SidebarFileItem({
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={cn("group/file relative", isDragging && "opacity-50")}
+      className={cn("group/file relative", isDragging && "opacity-40")}
     >
       <div
-        {...attributes}
-        {...listeners}
-        onClick={handleClick}
         className={cn(
-          "w-full flex items-center gap-2 h-auto py-2 px-3 text-left rounded-lg cursor-grab active:cursor-grabbing transition-colors",
+          "w-full flex items-center gap-2 h-auto py-2 px-3 text-left rounded-lg transition-colors",
           isActive
             ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
             : "hover:bg-slate-100 dark:hover:bg-slate-800",
         )}
       >
+        {/* Drag Handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+        >
+          <GripVertical className="h-3 w-3 text-slate-400" />
+        </div>
         <FileText className="h-4 w-4 flex-shrink-0 text-slate-400" />
-        <div className="flex-1 min-w-0">
+        <div
+          className="flex-1 min-w-0 cursor-pointer"
+          onClick={() => router.push(`/editor/${file.id}`)}
+        >
           <p className="text-sm font-medium truncate">
             {file.title || "Untitled"}
           </p>
@@ -420,6 +421,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGroupsLoading, setIsGroupsLoading] = useState(true);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
 
   // Fetch ungrouped files only
@@ -486,8 +488,9 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   };
 
   const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
+    if (!newGroupName.trim() || isSavingGroup) return;
 
+    setIsSavingGroup(true);
     try {
       const response = await groupsApi.create(newGroupName.trim());
       setGroups((prev) => [...prev, response.data]);
@@ -497,6 +500,8 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
     } catch (error) {
       console.error("Failed to create group:", error);
       toast.error("Failed to create group");
+    } finally {
+      setIsSavingGroup(false);
     }
   };
 
@@ -626,7 +631,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 w-64",
+        "bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 w-64 overflow-x-hidden",
         !isMobile && "hidden lg:flex fixed left-0 top-0 h-screen z-20",
         isMobile && "h-full",
       )}
@@ -670,7 +675,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
       <Separator />
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Projects Section (formerly Groups) - ChatGPT Style */}
         <div className="p-3">
           <div className="flex items-center justify-between px-2 py-1 mb-2">
@@ -696,7 +701,10 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateGroup();
+                  if (e.key === "Enter" && !isSavingGroup) {
+                    e.preventDefault();
+                    handleCreateGroup();
+                  }
                   if (e.key === "Escape") {
                     setNewGroupName("");
                     setIsCreatingGroup(false);
@@ -705,14 +713,20 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
                 placeholder="Project name..."
                 className="h-7 text-sm"
                 autoFocus
+                disabled={isSavingGroup}
               />
               <Button
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6"
                 onClick={handleCreateGroup}
+                disabled={isSavingGroup}
               >
-                <Check className="h-3 w-3 text-green-600" />
+                {isSavingGroup ? (
+                  <div className="h-3 w-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3 text-green-600" />
+                )}
               </Button>
               <Button
                 size="icon"
@@ -722,6 +736,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
                   setNewGroupName("");
                   setIsCreatingGroup(false);
                 }}
+                disabled={isSavingGroup}
               >
                 <X className="h-3 w-3 text-red-600" />
               </Button>

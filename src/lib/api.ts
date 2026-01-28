@@ -115,6 +115,7 @@ export const filesApi = {
     order?: "asc" | "desc";
     search?: string;
     ungrouped?: boolean;
+    group_id?: string;
   }): Promise<PaginatedResponse<MarkdownFile>> => {
     const response = await api.get("/files", { params });
     return response.data;

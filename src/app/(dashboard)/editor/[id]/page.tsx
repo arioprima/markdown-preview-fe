@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import {
   MarkdownEditor,
@@ -41,8 +41,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function EditorPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const fileId = params?.id as string;
   const isNewFile = fileId === "new";
+  const groupIdFromUrl = searchParams.get("group");
   const editorRef = useRef<MarkdownEditorRef>(null);
 
   const [title, setTitle] = useState("Untitled");
@@ -86,11 +88,13 @@ export default function EditorPage() {
     setIsSaving(true);
     try {
       if (isNewFile) {
-        const response = await filesApi.create(title, content);
+        // Pass groupId from URL if creating file from a group context
+        const response = await filesApi.create(title, content, groupIdFromUrl);
         toast.success("File created successfully", { duration: 1500 });
         router.push(`/editor/${response.data.id}`);
       } else {
-        await filesApi.update(fileId, title, content);
+        // Pass group_id to preserve the file's group assignment
+        await filesApi.update(fileId, title, content, originalFile?.group_id);
         toast.success("File saved successfully", { duration: 1500 });
       }
     } catch (error) {
@@ -143,7 +147,13 @@ export default function EditorPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => {
+              // Navigate back to the group if file belongs to one, otherwise dashboard
+              const groupId = originalFile?.group_id || groupIdFromUrl;
+              router.push(
+                groupId ? `/dashboard?group=${groupId}` : "/dashboard",
+              );
+            }}
             className="shrink-0"
           >
             <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />

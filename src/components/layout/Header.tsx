@@ -16,9 +16,10 @@ import { Sidebar } from "./Sidebar";
 interface HeaderProps {
   onSearch?: (query: string) => void;
   searchQuery?: string;
+  groupId?: string | null;
 }
 
-export function Header({ onSearch, searchQuery = "" }: HeaderProps) {
+export function Header({ onSearch, searchQuery = "", groupId }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState(searchQuery);
 
@@ -77,7 +78,7 @@ export function Header({ onSearch, searchQuery = "" }: HeaderProps) {
         </Button>
 
         {/* New File Button */}
-        <Link href="/editor/new">
+        <Link href={groupId ? `/editor/new?group=${groupId}` : "/editor/new"}>
           <Button className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 gap-2">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">New File</span>

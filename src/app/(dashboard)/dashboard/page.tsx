@@ -38,23 +38,30 @@ export default function DashboardPage() {
 
     setIsLoading(true);
     try {
+      // Fetch more files to ensure we get all files for this group
+      // Since backend doesn't support group_id filtering, we do client-side filtering
       const response = await filesApi.getAll({
-        page,
-        limit,
+        limit: 100, // Fetch more to get all group files
         orderBy: "created_at",
         order: "desc",
         search: searchQuery || undefined,
       });
       // Filter by group
       const groupFiles = response.data.filter((f) => f.group_id === groupId);
-      setFiles(groupFiles);
-      setTotalPages(response.pagination.totalPages);
+
+      // Paginate client-side
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedFiles = groupFiles.slice(startIndex, endIndex);
+
+      setFiles(paginatedFiles);
+      setTotalPages(Math.ceil(groupFiles.length / limit) || 1);
     } catch (error) {
       console.error("Failed to fetch files:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchQuery, groupId]);
+  }, [page, searchQuery, groupId, limit]);
 
   // Fetch groups
   const fetchGroups = useCallback(async () => {
@@ -97,7 +104,11 @@ export default function DashboardPage() {
   if (!groupId) {
     return (
       <>
-        <Header onSearch={handleSearch} searchQuery={searchQuery} />
+        <Header
+          onSearch={handleSearch}
+          searchQuery={searchQuery}
+          groupId={groupId}
+        />
 
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <div className="max-w-4xl mx-auto">
@@ -188,7 +199,11 @@ export default function DashboardPage() {
   // Show group content when a group is selected
   return (
     <>
-      <Header onSearch={handleSearch} searchQuery={searchQuery} />
+      <Header
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+        groupId={groupId}
+      />
 
       <main className="flex-1 p-4 lg:p-6 overflow-auto">
         <div className="max-w-7xl mx-auto">
