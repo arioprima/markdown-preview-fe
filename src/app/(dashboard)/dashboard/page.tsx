@@ -95,6 +95,64 @@ export default function DashboardPage() {
     fetchGroups();
   }, [fetchGroups]);
 
+  // Listen for file-moved events (optimistic update)
+  useEffect(() => {
+    const handleFileMoved = (
+      event: CustomEvent<{
+        fileId: string;
+        targetGroupId: string | null;
+        file: MarkdownFile;
+      }>,
+    ) => {
+      const { fileId, targetGroupId, file } = event.detail;
+
+      // If we're viewing a specific group
+      if (groupId) {
+        if (targetGroupId === groupId) {
+          // File was moved INTO this group - add it at the top
+          setFiles((prev) => {
+            if (prev.some((f) => f.id === fileId)) return prev;
+            return [{ ...file, group_id: targetGroupId }, ...prev];
+          });
+          setTotalFiles((prev) => prev + 1);
+        } else {
+          // File was moved OUT of this group - remove it
+          setFiles((prev) => prev.filter((f) => f.id !== fileId));
+          setTotalFiles((prev) => Math.max(0, prev - 1));
+        }
+      } else if (isUngrouped) {
+        // We're viewing ungrouped files
+        if (targetGroupId === null) {
+          // File was moved TO ungrouped - add it
+          setFiles((prev) => {
+            if (prev.some((f) => f.id === fileId)) return prev;
+            return [{ ...file, group_id: null }, ...prev];
+          });
+          setTotalFiles((prev) => prev + 1);
+        } else {
+          // File was moved to a group - remove from ungrouped view
+          setFiles((prev) => prev.filter((f) => f.id !== fileId));
+          setTotalFiles((prev) => Math.max(0, prev - 1));
+        }
+      } else {
+        // We're viewing all files - just update the file's group_id
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId ? { ...f, group_id: targetGroupId } : f,
+          ),
+        );
+      }
+    };
+
+    window.addEventListener("file-moved", handleFileMoved as EventListener);
+    return () => {
+      window.removeEventListener(
+        "file-moved",
+        handleFileMoved as EventListener,
+      );
+    };
+  }, [groupId, isUngrouped]);
+
   // Get current group name
   const currentGroup = groupId ? groups.find((g) => g.id === groupId) : null;
 

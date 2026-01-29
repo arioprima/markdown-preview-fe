@@ -75,8 +75,12 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
       toast.success(
         targetGroupId ? "File moved to group" : "File removed from group",
       );
-      // Trigger a page reload to refresh the data
-      window.location.reload();
+      // Dispatch custom event for sidebar to update without full page reload
+      window.dispatchEvent(
+        new CustomEvent("file-moved", {
+          detail: { fileId, targetGroupId, file },
+        }),
+      );
     } catch (error) {
       console.error("Failed to update file group:", error);
       toast.error("Failed to move file");

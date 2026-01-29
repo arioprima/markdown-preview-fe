@@ -214,10 +214,16 @@ function DraggableFileItem({
   file,
   isActive,
   formatDate,
+  groups,
+  onDelete,
+  onMoveToGroup,
 }: {
   file: MarkdownFile;
   isActive: boolean;
   formatDate: (date: string) => string;
+  groups?: Group[];
+  onDelete?: (fileId: string) => void;
+  onMoveToGroup?: (fileId: string, groupId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `file-${file.id}`,
@@ -232,7 +238,7 @@ function DraggableFileItem({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex items-center gap-1 px-2 py-2 rounded-lg transition-colors",
+        "group/file flex items-center gap-1 px-2 py-2 rounded-lg transition-colors",
         isActive
           ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
           : "hover:bg-slate-50 dark:hover:bg-slate-900",
@@ -263,6 +269,84 @@ function DraggableFileItem({
           </p>
         </div>
       </Link>
+
+      {/* Menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover/file:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreHorizontal className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {/* Move to Project submenu */}
+          {groups && groups.length > 0 && onMoveToGroup && (
+            <>
+              <DropdownMenuItem
+                className="text-slate-600 dark:text-slate-400"
+                disabled
+              >
+                <FolderOpen className="h-3 w-3 mr-2" />
+                Move to project...
+              </DropdownMenuItem>
+              {groups.map((group) => (
+                <DropdownMenuItem
+                  key={group.id}
+                  className="pl-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMoveToGroup(file.id, group.id);
+                  }}
+                >
+                  {group.name}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+            </>
+          )}
+
+          {/* Delete option */}
+          {onDelete && (
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(file.id);
+              }}
+            >
+              <Trash className="h-3 w-3 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// Droppable zone for ungrouped files (Chats section)
+function ChatsDropZone({ children }: { children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: "ungrouped",
+    data: {
+      type: "ungrouped",
+      groupId: null,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "p-3 rounded-lg transition-all",
+        isOver && "ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/30",
+      )}
+    >
+      {children}
     </div>
   );
 }
@@ -288,46 +372,93 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const [isSearchingGroups, setIsSearchingGroups] = useState(false);
   const GROUPS_LIMIT = 5;
 
-  // Fetch ungrouped files
+  // Initial fetch: groups and ungrouped files in parallel
   useEffect(() => {
-    const fetchUngroupedFiles = async () => {
-      try {
-        const response = await filesApi.getAll({
+    const fetchInitialData = async () => {
+      const [filesResult, groupsResult] = await Promise.allSettled([
+        filesApi.getAll({
           limit: 20,
           orderBy: "updated_at",
           order: "desc",
           ungrouped: true,
-        });
-        setUngroupedFiles(response.data);
-      } catch (error) {
-        console.error("Failed to fetch files:", error);
-      } finally {
-        setIsFilesLoading(false);
+        }),
+        groupsApi.getAll({ limit: 100 }),
+      ]);
+
+      if (filesResult.status === "fulfilled") {
+        setUngroupedFiles(filesResult.value.data);
+      } else {
+        console.error("Failed to fetch files:", filesResult.reason);
       }
+
+      if (groupsResult.status === "fulfilled") {
+        setGroups(groupsResult.value.data);
+      } else {
+        console.error("Failed to fetch groups:", groupsResult.reason);
+      }
+
+      setIsFilesLoading(false);
+      setIsGroupsLoading(false);
     };
-    fetchUngroupedFiles();
+
+    fetchInitialData();
   }, []);
 
-  // Fetch groups with search support
+  // Listen for file-moved events (from drag-drop in layout)
   useEffect(() => {
-    const fetchGroups = async () => {
-      setIsSearchingGroups(true);
+    const handleFileMoved = (
+      event: CustomEvent<{
+        fileId: string;
+        targetGroupId: string | null;
+        file: MarkdownFile;
+      }>,
+    ) => {
+      const { fileId, targetGroupId, file } = event.detail;
+
+      if (targetGroupId) {
+        // File moved to a group - remove from ungrouped
+        setUngroupedFiles((prev) => prev.filter((f) => f.id !== fileId));
+      } else {
+        // File moved to ungrouped - add to ungrouped list
+        setUngroupedFiles((prev) => {
+          // Check if file already exists
+          if (prev.some((f) => f.id === fileId)) {
+            return prev;
+          }
+          // Add file with updated group_id
+          return [{ ...file, group_id: null }, ...prev];
+        });
+      }
+    };
+
+    window.addEventListener("file-moved", handleFileMoved as EventListener);
+    return () => {
+      window.removeEventListener(
+        "file-moved",
+        handleFileMoved as EventListener,
+      );
+    };
+  }, []);
+
+  // Search groups with debounce (only when searching)
+  useEffect(() => {
+    if (!groupSearch) return; // Skip if no search query
+
+    setIsSearchingGroups(true);
+    const timer = setTimeout(async () => {
       try {
         const response = await groupsApi.getAll({
           limit: 100,
-          search: groupSearch || undefined,
+          search: groupSearch,
         });
         setGroups(response.data);
       } catch (error) {
-        console.error("Failed to fetch groups:", error);
+        console.error("Failed to search groups:", error);
       } finally {
-        setIsGroupsLoading(false);
         setIsSearchingGroups(false);
       }
-    };
+    }, 300);
 
-    // Debounce search
-    const timer = setTimeout(fetchGroups, groupSearch ? 300 : 0);
     return () => clearTimeout(timer);
   }, [groupSearch]);
 
@@ -412,6 +543,36 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
       toast.error("Failed to delete group");
     } finally {
       setDeletingGroupId(null);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    try {
+      await filesApi.delete(fileId);
+      setUngroupedFiles((prev) => prev.filter((f) => f.id !== fileId));
+      toast.success("File deleted");
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      toast.error("Failed to delete file");
+    }
+  };
+
+  const handleMoveFileToGroup = async (
+    fileId: string,
+    groupId: string | null,
+  ) => {
+    try {
+      await filesApi.updateGroup(fileId, groupId);
+      // Remove from ungrouped files if moving to a group
+      if (groupId) {
+        setUngroupedFiles((prev) => prev.filter((f) => f.id !== fileId));
+      }
+      toast.success(
+        groupId ? "File moved to project" : "File removed from project",
+      );
+    } catch (error) {
+      console.error("Failed to move file:", error);
+      toast.error("Failed to move file");
     }
   };
 
@@ -695,8 +856,8 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
 
         <Separator />
 
-        {/* Chats Section - Ungrouped Files */}
-        <div className="p-3">
+        {/* Chats Section - Ungrouped Files (Droppable) */}
+        <ChatsDropZone>
           <div className="flex items-center gap-2 px-2 py-1 mb-2">
             <MessageSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -725,11 +886,14 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
                   file={file}
                   isActive={pathname === `/editor/${file.id}`}
                   formatDate={formatDate}
+                  groups={groups}
+                  onDelete={handleDeleteFile}
+                  onMoveToGroup={handleMoveFileToGroup}
                 />
               ))}
             </div>
           )}
-        </div>
+        </ChatsDropZone>
       </div>
 
       <Separator />
