@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Group, MarkdownFile } from "@/types";
 import { GroupCard } from "./GroupCard";
 import { Button } from "@/components/ui/button";

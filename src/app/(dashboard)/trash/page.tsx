@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { trashApi } from "@/lib/api";
 import { MarkdownFile } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,

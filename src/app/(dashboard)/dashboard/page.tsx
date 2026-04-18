@@ -232,7 +232,7 @@ export default function DashboardPage() {
                   </div>
                   <h3 className="font-semibold mb-2">Create Files</h3>
                   <p className="text-sm text-muted-foreground">
-                    Click "New Document" in the sidebar to create markdown files
+                    Click &quot;New Document&quot; in the sidebar to create markdown files
                   </p>
                 </div>
 

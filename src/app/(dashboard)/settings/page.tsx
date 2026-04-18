@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
@@ -30,7 +29,6 @@ import { toast } from "sonner";
 import { User, Lock, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { user, refreshUser, logout } = useAuth();
 
   // Profile form

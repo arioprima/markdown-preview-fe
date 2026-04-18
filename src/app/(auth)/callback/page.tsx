@@ -34,6 +34,7 @@ function AuthCallbackContent() {
         router.replace("/login?error=OAuth+login+failed");
       }, 2000);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Show error if any

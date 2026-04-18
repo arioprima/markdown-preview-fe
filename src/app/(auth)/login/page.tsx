@@ -82,11 +82,11 @@ export default function LoginPage() {
   return (
     <Card className="shadow-2xl border-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl overflow-hidden max-h-[calc(100vh-2rem)] lg:max-h-none">
       {/* Decorative top gradient bar */}
-      <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+      <div className="h-1.5 bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
       <CardHeader className="text-center space-y-1 pb-2 pt-4 lg:pt-6">
         {/* Mobile Logo */}
-        <div className="lg:hidden mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/30 mb-3">
+        <div className="lg:hidden mx-auto w-16 h-16 bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/30 mb-3">
           <svg
             className="w-8 h-8 text-white"
             viewBox="0 0 24 24"
@@ -100,7 +100,7 @@ export default function LoginPage() {
             <line x1="16" y1="17" x2="8" y2="17" />
           </svg>
         </div>
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+        <CardTitle className="text-2xl font-bold bg-linear-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
           Welcome back
         </CardTitle>
         <CardDescription className="text-base">
@@ -145,7 +145,7 @@ export default function LoginPage() {
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl border border-red-200 dark:border-red-800 animate-in slide-in-from-top-1 flex items-center gap-2">
               <svg
-                className="w-4 h-4 flex-shrink-0"
+                className="w-4 h-4 shrink-0"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -216,7 +216,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className="w-full h-12 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-semibold shadow-xl shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-300 group rounded-xl"
+            className="w-full h-12 bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-semibold shadow-xl shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-300 group rounded-xl"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -239,7 +239,7 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-500 hover:to-purple-500 transition-all"
+            className="font-semibold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-500 hover:to-purple-500 transition-all"
           >
             Create one free
           </Link>

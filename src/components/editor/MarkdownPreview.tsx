@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { cn } from "@/lib/utils";
 
 // --- KOMPONEN CAROUSEL ---
@@ -34,7 +34,7 @@ const SimpleCarousel = ({ content }: { content: string }) => {
   return (
     <div className="my-4 md:my-6 w-full border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
       {/* Slide Content */}
-      <div className="p-3 md:p-6 bg-slate-50 dark:bg-slate-800 min-h-[250px] md:min-h-[400px]">
+      <div className="p-3 md:p-6 bg-slate-50 dark:bg-slate-800 min-h-62.5 md:min-h-100">
         <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -46,7 +46,7 @@ const SimpleCarousel = ({ content }: { content: string }) => {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between px-3 md:px-6 py-2 md:py-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t border-slate-200 dark:border-slate-700">
+      <div className="flex items-center justify-between px-3 md:px-6 py-2 md:py-4 bg-linear-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t border-slate-200 dark:border-slate-700">
         <button
           onClick={prevSlide}
           disabled={slides.length <= 1}
@@ -126,7 +126,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
 
         // Prevent overflow
         "overflow-x-hidden overflow-y-auto overscroll-contain",
-        "[overflow-wrap:break-word] [word-wrap:break-word]",
+        "wrap-break-word",
 
         // Headings - responsive
         "prose-headings:font-bold",
@@ -143,14 +143,14 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
 
         // Links
         "prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline",
-        "prose-a:break-words",
+        "prose-a:wrap-break-word",
 
         // Inline code
         "prose-code:bg-slate-100 dark:prose-code:bg-slate-800",
         "prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs md:prose-code:text-sm",
         "prose-code:before:content-none prose-code:after:content-none",
         "prose-code:text-indigo-600 dark:prose-code:text-indigo-400",
-        "prose-code:break-words",
+        "prose-code:wrap-break-word",
 
         // Blockquotes
         "prose-blockquote:border-l-4 prose-blockquote:border-indigo-500",
@@ -179,7 +179,17 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
           components={{
-            code({ node, inline, className, children, ...props }: any) {
+            code({
+              inline,
+              className,
+              children,
+              ...props
+            }: {
+              node?: unknown;
+              inline?: boolean;
+              className?: string;
+              children?: React.ReactNode;
+            } & React.HTMLAttributes<HTMLElement>) {
               const match = /language-(\w+)/.exec(className || "");
               const lang = match ? match[1] : "";
 
@@ -195,25 +205,47 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
               // Code block (not inline)
               if (!inline && lang) {
                 return (
-                  <SyntaxHighlighter
-                    style={vscDarkPlus}
-                    language={lang}
-                    PreTag="div"
-                    customStyle={{
-                      margin: 0,
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
-                    codeTagProps={{
-                      style: {
-                        fontFamily:
-                          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                      },
-                    }}
-                    {...props}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
+                  <div className="relative my-4 rounded-xl overflow-hidden bg-[#282c34] border border-slate-700/50 shadow-sm">
+                    {/* macOS Style Header */}
+                    <div className="flex items-center px-4 py-3 bg-[#21252b] border-b border-[#181a1f]">
+                      <div className="flex space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                        <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                        <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                          {lang}
+                        </span>
+                      </div>
+                      <div className="w-12" />{" "}
+                      {/* Spacer to balance the dots */}
+                    </div>
+                    {/* Code Content */}
+                    <div className="overflow-x-auto">
+                      <SyntaxHighlighter
+                        // @ts-expect-error - React 19 CSSProperties type mismatch with react-syntax-highlighter
+                        style={oneDark}
+                        language={lang}
+                        PreTag="div"
+                        customStyle={{
+                          margin: 0,
+                          padding: "1rem",
+                          background: "transparent",
+                          fontSize: "0.875rem",
+                        }}
+                        codeTagProps={{
+                          style: {
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                          },
+                        }}
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, "")}
+                      </SyntaxHighlighter>
+                    </div>
+                  </div>
                 );
               }
 

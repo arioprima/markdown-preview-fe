@@ -31,7 +31,6 @@ import {
   Trash2,
   Loader2,
   ArrowLeft,
-  PanelLeftClose,
   PanelLeft,
   Eye,
   Edit,
@@ -57,13 +56,6 @@ export default function EditorPage() {
   );
   const [originalFile, setOriginalFile] = useState<MarkdownFile | null>(null);
 
-  // Fetch existing file
-  useEffect(() => {
-    if (!isNewFile && fileId) {
-      fetchFile();
-    }
-  }, [fileId, isNewFile]);
-
   const fetchFile = async () => {
     try {
       const response = await filesApi.getById(fileId);
@@ -78,6 +70,14 @@ export default function EditorPage() {
       setIsLoading(false);
     }
   };
+
+  // Fetch existing file
+  useEffect(() => {
+    if (!isNewFile && fileId) {
+      fetchFile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, isNewFile]);
 
   const handleSave = async () => {
     if (!title.trim()) {

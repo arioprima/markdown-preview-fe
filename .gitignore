@@ -43,3 +43,10 @@ next-env.d.ts
 # ignore folder docs
 /docs
 
+# reference images / screenshots
+/screenshots
+
+
+# rules for AI-generated code
+GEMINI.md
+.cursorrules
