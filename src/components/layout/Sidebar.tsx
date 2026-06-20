@@ -440,6 +440,48 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
     };
   }, []);
 
+  // Listen for file-created / file-updated events (dari editor saat save)
+  useEffect(() => {
+    const handleFileCreated = (
+      event: CustomEvent<{ file: MarkdownFile }>,
+    ) => {
+      const { file } = event.detail;
+      if (!file) return;
+      // Hanya file tanpa project yang tampil di daftar Chats
+      if (file.group_id == null) {
+        setUngroupedFiles((prev) =>
+          prev.some((f) => f.id === file.id) ? prev : [file, ...prev],
+        );
+      }
+    };
+
+    const handleFileUpdated = (
+      event: CustomEvent<{ file: MarkdownFile }>,
+    ) => {
+      const { file } = event.detail;
+      if (!file) return;
+      setUngroupedFiles((prev) => {
+        const without = prev.filter((f) => f.id !== file.id);
+        // Kalau masih ungrouped, taruh versi terbaru di paling atas;
+        // kalau sudah masuk project, otomatis hilang dari daftar Chats
+        return file.group_id == null ? [file, ...without] : without;
+      });
+    };
+
+    window.addEventListener("file-created", handleFileCreated as EventListener);
+    window.addEventListener("file-updated", handleFileUpdated as EventListener);
+    return () => {
+      window.removeEventListener(
+        "file-created",
+        handleFileCreated as EventListener,
+      );
+      window.removeEventListener(
+        "file-updated",
+        handleFileUpdated as EventListener,
+      );
+    };
+  }, []);
+
   // Search groups with debounce (only when searching)
   useEffect(() => {
     if (!groupSearch) return; // Skip if no search query
@@ -858,11 +900,22 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
 
         {/* Chats Section - Ungrouped Files (Droppable) */}
         <ChatsDropZone>
-          <div className="flex items-center gap-2 px-2 py-1 mb-2">
-            <MessageSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              Chats
-            </span>
+          <div className="flex items-center justify-between px-2 py-1 mb-2">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                Chats
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={createNewFile}
+              title="New chat"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
           </div>
 
           {isFilesLoading ? (

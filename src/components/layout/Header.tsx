@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Plus, Sun, Moon, Menu } from "lucide-react";
+import { Plus, Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -13,14 +12,13 @@ import {
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Sidebar } from "./Sidebar";
 import { GlobalSearch } from "./GlobalSearch";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface HeaderProps {
   groupId?: string | null;
 }
 
 export function Header({ groupId }: HeaderProps) {
-  const { theme, setTheme } = useTheme();
-
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-10">
       {/* Mobile Menu */}
@@ -48,18 +46,7 @@ export function Header({ groupId }: HeaderProps) {
       {/* Actions */}
       <div className="flex items-center gap-2">
         {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="h-9 w-9"
-        >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5 text-yellow-500" />
-          ) : (
-            <Moon className="h-5 w-5 text-slate-600" />
-          )}
-        </Button>
+        <ThemeToggle />
 
         {/* New File Button */}
         <Link href={groupId ? `/editor/new?group=${groupId}` : "/editor/new"}>

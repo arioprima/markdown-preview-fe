@@ -11,6 +11,8 @@ import {
   UpdateProfileData,
   CountResponse,
   Group,
+  ShareInfo,
+  SharedFile,
 } from "@/types";
 
 // Create axios instance - uses Next.js API routes as proxy
@@ -193,6 +195,34 @@ export const filesApi = {
 
   bulkDelete: async (ids: string[]): Promise<ApiResponse<null>> => {
     const response = await api.delete("/files", { data: { ids } });
+    return response.data;
+  },
+};
+
+// ============ SHARE API ============
+
+export const shareApi = {
+  // Cek status share file saat ini (butuh auth)
+  getStatus: async (id: string): Promise<ApiResponse<ShareInfo>> => {
+    const response = await api.get(`/files/${id}/share`);
+    return response.data;
+  },
+
+  // Aktifkan share publik untuk file, mengembalikan token (butuh auth)
+  enable: async (id: string): Promise<ApiResponse<ShareInfo>> => {
+    const response = await api.post(`/files/${id}/share`);
+    return response.data;
+  },
+
+  // Nonaktifkan / cabut share publik (butuh auth)
+  disable: async (id: string): Promise<ApiResponse<null>> => {
+    const response = await api.delete(`/files/${id}/share`);
+    return response.data;
+  },
+
+  // Ambil konten file yang dibagikan lewat token (publik, tanpa auth)
+  getShared: async (token: string): Promise<ApiResponse<SharedFile>> => {
+    const response = await api.get(`/shared/${token}`);
     return response.data;
   },
 };

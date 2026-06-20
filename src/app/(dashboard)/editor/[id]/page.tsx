@@ -26,6 +26,8 @@ import {
 import { filesApi } from "@/lib/api";
 import { MarkdownFile } from "@/types";
 import { toast } from "sonner";
+import { ShareDialog } from "@/components/editor/ShareDialog";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import {
   Save,
   Trash2,
@@ -34,8 +36,43 @@ import {
   PanelLeft,
   Eye,
   Edit,
+  Share2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Ambil judul otomatis dari heading/baris pertama konten markdown
+function extractTitleFromContent(content: string): string {
+  if (!content) return "";
+  for (const line of content.split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    const cleaned = t
+      .replace(/^#{1,6}\s+/, "") // heading
+      .replace(/^>\s+/, "") // blockquote
+      .replace(/^[-*+]\s+/, "") // bullet list
+      .replace(/^\d+\.\s+/, "") // ordered list
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // link/image -> teks
+      .replace(/[*_`~]/g, "") // emphasis/code
+      .trim();
+    if (cleaned) return cleaned.slice(0, 80);
+  }
+  return "";
+}
+
+// Judul efektif: pakai input user, kalau kosong derive dari konten, fallback tanggal
+function deriveTitle(rawTitle: string, content: string): string {
+  const trimmed = (rawTitle || "").trim();
+  if (trimmed) return trimmed;
+
+  const fromContent = extractTitleFromContent(content);
+  if (fromContent) return fromContent;
+
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `Untitled ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate(),
+  )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function EditorPage() {
   const router = useRouter();
@@ -46,7 +83,7 @@ export default function EditorPage() {
   const groupIdFromUrl = searchParams.get("group");
   const editorRef = useRef<MarkdownEditorRef>(null);
 
-  const [title, setTitle] = useState("Untitled");
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(!isNewFile);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,26 +117,45 @@ export default function EditorPage() {
   }, [fileId, isNewFile]);
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      toast.error("Please enter a title");
-      return;
-    }
+    // Judul otomatis dari konten kalau user tidak mengisinya
+    const effectiveTitle = deriveTitle(title, content);
 
     setIsSaving(true);
     try {
       if (isNewFile) {
         // Pass groupId from URL if creating file from a group context
-        const response = await filesApi.create(title, content, groupIdFromUrl);
+        const response = await filesApi.create(
+          effectiveTitle,
+          content,
+          groupIdFromUrl,
+        );
+        // Sinkronkan sidebar/daftar tanpa perlu refresh
+        window.dispatchEvent(
+          new CustomEvent("file-created", { detail: { file: response.data } }),
+        );
         toast.success("File created successfully", { duration: 1500 });
         router.push(`/editor/${response.data.id}`);
       } else {
         // Pass group_id to preserve the file's group assignment
-        await filesApi.update(fileId, title, content, originalFile?.group_id);
+        const response = await filesApi.update(
+          fileId,
+          effectiveTitle,
+          content,
+          originalFile?.group_id,
+        );
+        setTitle(effectiveTitle);
+        setOriginalFile(response.data); // reset "Unsaved changes"
+        window.dispatchEvent(
+          new CustomEvent("file-updated", { detail: { file: response.data } }),
+        );
         toast.success("File saved successfully", { duration: 1500 });
       }
     } catch (error) {
       console.error("Failed to save:", error);
-      toast.error("Failed to save file", { duration: 1500 });
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Failed to save file";
+      toast.error(message, { duration: 2000 });
     } finally {
       setIsSaving(false);
     }
@@ -172,6 +228,9 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {/* View Mode Switcher (Desktop) */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
             <Button
@@ -214,6 +273,24 @@ export default function EditorPage() {
               <Eye className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Share Button */}
+          {!isNewFile && (
+            <ShareDialog
+              fileId={fileId}
+              initialIsPublic={originalFile?.is_public}
+              initialToken={originalFile?.share_token}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                title="Bagikan"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </ShareDialog>
+          )}
 
           {/* Delete Button */}
           {!isNewFile && (

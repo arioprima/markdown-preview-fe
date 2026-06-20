@@ -18,6 +18,24 @@ export interface MarkdownFile {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  // Share fields (opsional — diisi backend bila file dibagikan publik)
+  is_public?: boolean;
+  share_token?: string | null;
+}
+
+// Share types
+export interface ShareInfo {
+  is_public: boolean;
+  token: string | null;
+}
+
+// File yang dibagikan publik (read-only, tanpa data sensitif)
+export interface SharedFile {
+  title: string;
+  content: string;
+  username?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Group types

@@ -7,6 +7,7 @@ import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "@/lib/utils";
+import { MermaidDiagram } from "./MermaidDiagram";
 import {
   Check,
   Copy,
@@ -132,6 +133,10 @@ const CodeBlock = ({
 
   if (lang === "carousel") {
     return <SimpleCarousel content={content} />;
+  }
+
+  if (lang === "mermaid") {
+    return <MermaidDiagram chart={content} />;
   }
 
   return (

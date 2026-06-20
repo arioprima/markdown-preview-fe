@@ -1,9 +1,14 @@
 import { ReactNode } from "react";
 import { FileText, Sparkles, Zap, Shield } from "lucide-react";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex">
+      {/* Theme Toggle - fixed di pojok kanan atas */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm shadow-sm" />
+      </div>
       {/* Left Side - Branding & Illustration (hidden on screens < 1024px width OR < 700px height) */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 max-lg:[@media(max-height:700px)]:hidden">
         {/* Animated Background Pattern */}

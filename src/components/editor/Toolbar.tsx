@@ -16,6 +16,7 @@ import {
   Quote,
   Minus,
   Image,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +136,18 @@ const toolbarItems = [
         action: "hr",
         before: "\n---\n",
         after: "",
+      },
+    ],
+  },
+  {
+    group: "diagram",
+    items: [
+      {
+        icon: Workflow,
+        label: "Mermaid Diagram",
+        action: "mermaid",
+        before: "```mermaid\nflowchart TD\n    A[",
+        after: "] --> B[End]\n```\n",
       },
     ],
   },
