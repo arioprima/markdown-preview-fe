@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -405,11 +405,12 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
             h4: ({ children, node, ...rest }) => <h4 id={generateSlug(children)} {...rest}>{children}</h4>,
             h5: ({ children, node, ...rest }) => <h5 id={generateSlug(children)} {...rest}>{children}</h5>,
             h6: ({ children, node, ...rest }) => <h6 id={generateSlug(children)} {...rest}>{children}</h6>,
-            pre(props: React.ComponentPropsWithoutRef<"pre"> & { node?: any }) {
+            pre(props: React.ComponentPropsWithoutRef<"pre"> & ExtraProps) {
               const { children, node, ...rest } = props;
+              void node;
 
-              if (React.isValidElement(children)) {
-                const childProps = children.props as any;
+              if (React.isValidElement<React.ComponentPropsWithoutRef<"code">>(children)) {
+                const childProps = children.props;
                 const match = /language-(\w+)/.exec(childProps.className || "");
                 const lang = match ? match[1] : "text";
                 return <CodeBlock lang={lang}>{childProps.children}</CodeBlock>;

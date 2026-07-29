@@ -1,35 +1,187 @@
-name: Deploy to VPS
+name: Frontend CI/CD
 
 on:
+  pull_request:
+    branches:
+      - prod-v1
   push:
     branches:
       - prod-v1
+  workflow_dispatch:
+
+concurrency:
+  group: markdown-preview-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  deploy:
+  validate:
+    name: Lint and build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: ${{ secrets.PORT }}
-          script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            export PATH="$PATH:/usr/local/bin:/usr/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node)/bin"
+          persist-credentials: false
 
-            cd /var/www/markdown-preview/markdown-preview-fe 
-            git pull origin prod-v1
-            npm install
-            npm run build
-            npm prune --production
-            pm2 restart markdown-preview-fe || pm2 start ecosystem.config.js
-            echo "Deployment completed at $(date)"
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build application
+        env:
+          API_URL: http://127.0.0.1:8080
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8080
+        run: npm run build
+
+  release:
+    name: Publish and deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/prod-v1'
+    needs:
+      - validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Validate production configuration
+        env:
+          API_URL: ${{ vars.API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          required_values=(
+            API_URL
+            NEXT_PUBLIC_API_URL
+            VPS_HOST
+            VPS_PORT
+            VPS_USER
+            VPS_KNOWN_HOSTS
+            VPS_SSH_KEY
+          )
+
+          for variable_name in "${required_values[@]}"; do
+            if [[ -z "${!variable_name}" ]]; then
+              echo "::error::$variable_name is not configured in the production environment."
+              exit 1
+            fi
+          done
+
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push immutable image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-v1
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Prepare SSH and deployment files
+        env:
+          API_URL: ${{ vars.API_URL }}
+          FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          FRONTEND_PORT: ${{ vars.FRONTEND_PORT }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          install -d -m 0700 "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$RUNNER_TEMP/ssh/deploy_key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          chmod 0600 "$RUNNER_TEMP/ssh/deploy_key" "$RUNNER_TEMP/ssh/known_hosts"
+
+          install -d -m 0700 "$RUNNER_TEMP/deploy"
+          install -m 0644 deploy/compose.yml "$RUNNER_TEMP/deploy/compose.yml"
+          install -m 0755 deploy/deploy.sh "$RUNNER_TEMP/deploy/deploy.sh"
+
+          {
+            printf 'FRONTEND_IMAGE=%s\n' "$FRONTEND_IMAGE"
+            printf 'FRONTEND_PORT=%s\n' "${FRONTEND_PORT:-3001}"
+            printf 'API_URL=%s\n' "$API_URL"
+          } > "$RUNNER_TEMP/deploy/.env"
+          chmod 0600 "$RUNNER_TEMP/deploy/.env"
+
+      - name: Deploy image to Lightsail
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          ssh_options=(
+            -i "$RUNNER_TEMP/ssh/deploy_key"
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts"
+            -p "$VPS_PORT"
+          )
+          scp_options=(
+            -i "$RUNNER_TEMP/ssh/deploy_key"
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts"
+            -P "$VPS_PORT"
+          )
+          target="$VPS_USER@$VPS_HOST"
+          remote_tmp="/tmp/markdown-preview-frontend-${{ github.run_id }}"
+          app_dir="/opt/apps/markdown-preview/frontend"
+
+          # shellcheck disable=SC2029 # Paths are intentionally expanded by the runner.
+          ssh "${ssh_options[@]}" "$target" "install -d -m 0700 '$remote_tmp'"
+          scp "${scp_options[@]}" \
+            "$RUNNER_TEMP/deploy/compose.yml" \
+            "$RUNNER_TEMP/deploy/deploy.sh" \
+            "$RUNNER_TEMP/deploy/.env" \
+            "$target:$remote_tmp/"
+
+          # shellcheck disable=SC2029 # The short-lived token username is supplied by the runner.
+          printf '%s' "$GHCR_TOKEN" |
+            ssh "${ssh_options[@]}" "$target" \
+              "if docker info >/dev/null 2>&1; then docker login ghcr.io --username '$GHCR_USER' --password-stdin; else sudo docker login ghcr.io --username '$GHCR_USER' --password-stdin; fi"
+
+          # shellcheck disable=SC2029 # Deployment paths are controlled runner values.
+          ssh "${ssh_options[@]}" "$target" \
+            "sudo install -d -m 0755 -o '$VPS_USER' -g '$VPS_USER' '$app_dir' &&
+             '$remote_tmp/deploy.sh' '$app_dir' '$remote_tmp/compose.yml' '$remote_tmp/.env';
+             deployment_status=\$?;
+             rm -r -- '$remote_tmp';
+             exit \$deployment_status"

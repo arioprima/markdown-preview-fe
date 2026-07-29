@@ -1,0 +1,18 @@
+name: markdown-preview-frontend
+
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    container_name: markdown-preview-frontend
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      API_URL: ${API_URL:?API_URL is required}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3001}:3000"
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 20s
